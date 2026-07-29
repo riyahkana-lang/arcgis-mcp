@@ -10,10 +10,11 @@ mcp = MCPServer("arcgis-connector", version="0.1.0")
 @mcp.tool()
 async def list_known_services() -> str:
     """List pre-verified ArcGIS REST services this connector knows about
-    (currently: RRC well/pipeline data mirrored by Houston-Galveston Area
-    Council). Use these as a starting point, or call query_layer /
-    get_layer_info against any other ArcGIS REST MapServer/FeatureServer URL
-    - including your own ArcGIS Online account once you have a token."""
+    (currently: RRC's real statewide well/pipeline data, plus a Houston-area
+    regional mirror as fallback). Use these as a starting point, or call
+    query_layer / get_layer_info against any other ArcGIS REST
+    MapServer/FeatureServer URL - including your own ArcGIS Online account
+    once you have a token."""
     return json.dumps(KNOWN_SERVICES, indent=2)
 
 
@@ -33,6 +34,7 @@ async def query_arcgis_layer(
     where: str = "1=1",
     out_fields: str = "*",
     bbox: str | None = None,
+    result_offset: int = 0,
     token: str | None = None,
 ) -> str:
     """Query an ArcGIS Feature/MapServer layer and return GeoJSON features.
@@ -43,6 +45,9 @@ async def query_arcgis_layer(
     where: SQL-style filter, e.g. "API='42-xxxxxxxx'" or "1=1" for everything.
     out_fields: comma-separated field names, or "*" for all.
     bbox: optional "xmin,ymin,xmax,ymax" in WGS84 lat/long to limit by area.
+    result_offset: for pagination - if the response says
+      "exceededTransferLimit": true, call again with result_offset increased
+      by 1000 (the default page size) to get the next page.
     token: optional ArcGIS auth token, needed only for private/ArcGIS Online
       services - not needed for the public RRC-derived layers.
     """
@@ -52,6 +57,7 @@ async def query_arcgis_layer(
         where=where,
         out_fields=out_fields,
         bbox=bbox,
+        result_offset=result_offset,
         token=token,
     )
     return json.dumps(geojson, indent=2)
